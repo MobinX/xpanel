@@ -17,6 +17,27 @@ interface FS_Operation {
   
   type ClientMessage = FS_Operation | ShellCommand;
 
+  interface FS_Progress {
+    type: 'FS_PROGRESS';
+    msg: string;
+    perFileProgress?: number;
+    overallProgress?: number;
+}
+
+interface FS_Content {
+    type: 'FS_CONTENT';
+    name: string;
+    progress: number;
+    newChunk: string;
+}
+
+interface ShellOutput {
+    type: 'SHELL_OUT';
+    newOutput: string;
+}
+
+type ServerMessage = FS_Progress | FS_Content | ShellOutput;
+
   
 export const WebSocketContext = createContext<{
     sendMsg:(msg:ClientMessage) => void
@@ -31,7 +52,7 @@ export const WebSocketContext = createContext<{
 })
 
 export const WebSocketManager = ({ socketUrl, children }: { socketUrl:string ,children: ReactNode }) => {
-    const [lastMsg, setLastMsg] = useState<{ id: string, msg: any } | null>(null);
+    const [lastMsg, setLastMsg] = useState<{ id: string, msg: ServerMessage } | null>(null);
     const [socketError, setSocketError] = useState<string | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
     const socketRef = useRef<WebSocket | null>(null);
@@ -48,7 +69,7 @@ export const WebSocketManager = ({ socketUrl, children }: { socketUrl:string ,ch
         socket.addEventListener('message', (event) => {
             const msg = {
                 id: crypto.randomUUID(), // Generate UUID on the client-side
-                msg: event.data
+                msg: JSON.parse(event.data)
             };
             setLastMsg(msg); 
         });

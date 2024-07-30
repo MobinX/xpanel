@@ -3,6 +3,7 @@ import { createContext, ReactNode, useContext, useEffect, useReducer, useState }
 import { directoryItemType, getDir } from "../actions/fsActions";
 import { useRouter, useSearchParams } from "next/navigation"
 import { WebSocketContext } from "@/app/components/WebSocketManager";
+import { UUID } from "crypto";
 
 export const FSContext = createContext<{
     FsHistory: string[]
@@ -22,6 +23,17 @@ export const FSContext = createContext<{
     selectedIds: any[]
     setSelectMode: any
     setSelectedIds: any
+    OperationQue:{id:UUID,msg?:string,progress?:number}[]
+    setOperationQue:any
+    copyPathList:string[]
+    cutPathList:string[]
+    applyCopy:any
+    applyCut:any
+    applyDelete:any
+    readFile:any
+    writeFile: (src:string,content:string) => void
+    fileContent:string
+
 
 }>({
     FsHistory: [],
@@ -40,7 +52,18 @@ export const FSContext = createContext<{
     selectMode: false,
     selectedIds: [],
     setSelectMode: () => { },
-    setSelectedIds: () => { }
+    setSelectedIds: () => { },
+    OperationQue:[],
+    setOperationQue:()=> {},
+    copyPathList:[],
+    cutPathList:[],
+    applyCopy:()=>{},
+    applyCut:()=>{},
+    applyDelete:()=>{},
+    fileContent:"",
+    readFile:(src:any)=>{},
+    writeFile:(src:string,content:string)=>{},
+
 
 })
 
@@ -57,8 +80,14 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
 
     const [selectMode, setSelectMode] = useState(false)
     const [selectedIds, setSelectedIds] = useState<any[]>([])
+    const [copyPathList,setCopyPathList] = useState<string[]>([])
+    const [cutPathList,setCutPathList] = useState<string[]>([])
+    const [OperationQue,setOperationQue] = useState<{id:UUID,msg?:string,progress?:number}[]>([])
+    const [fileContent, setFileContent] = useState<string>("")
 
-    const { sendMsg, lastMsg, isInitialized } = useContext(WebSocketContext)
+
+
+    const { sendMsg, lastMsg, isInitialized ,socketError} = useContext(WebSocketContext)
 
     useEffect(() => {
         if (isInitialized) {
@@ -74,6 +103,72 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
 
     }, [lastMsg])
 
+
+    const applyCopy = () => {
+        if(selectMode) {
+            setCopyPathList(selectedIds)
+            setSelectMode(false)
+        }
+    }
+    
+    const applyCut = () => {
+        if(selectMode) {
+            setCutPathList(selectedIds)
+            setSelectMode(false)
+        }
+    }
+
+    
+    const applyDelete = () => {
+        if(OperationQue.length > 0 ) {return}
+        if(selectMode) {
+            sendMsg({
+                type:"FS_OP",
+                cmd:"delete",
+                srcFiles:selectedIds
+            })
+            setSelectMode(false)
+        }
+    }
+
+    const applyPast = (dst:string) => {
+        if(OperationQue.length > 0 ) {return}
+
+        if(copyPathList.length > 0) {
+            sendMsg({
+                type:"FS_OP",
+                cmd:"copy",
+                srcFiles:selectedIds,
+                dst:dst
+            })
+
+        }
+        if(cutPathList.length > 0) {
+            sendMsg({
+                type:"FS_OP",
+                cmd:"cut",
+                srcFiles:selectedIds,
+                dst:dst
+            })
+
+        }
+    }
+    const readFile = (src:string) =>{
+
+        sendMsg({
+            type:"FS_OP",
+            cmd:"read",
+            srcFiles:src
+        })
+    }
+    const writeFile = (src:string,content:string) =>{
+        sendMsg({
+            type:"FS_OP",
+            cmd:"write",
+            content:content,
+            srcFiles:src
+        })
+    }
 
     const router = useRouter();
 
@@ -161,7 +256,7 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
     }
 
     return (
-        <FSContext.Provider value={{ FsHistory, canGoBack, canGoNext, currentPath, dirItems, errorMsg, goBack, goNext, loadingState, openFolder, presentHistoryIndex, includeInHistory, setIncludeInHistory, selectMode, setSelectMode, selectedIds, setSelectedIds }} >
+        <FSContext.Provider value={{ FsHistory, canGoBack, canGoNext, currentPath, dirItems, errorMsg, goBack, goNext, loadingState, openFolder, presentHistoryIndex, includeInHistory, setIncludeInHistory, selectMode, setSelectMode, selectedIds, setSelectedIds,applyCopy,applyCut,applyDelete,copyPathList,cutPathList,OperationQue,readFile,setOperationQue,writeFile,fileContent }} >
             {children}
         </FSContext.Provider>
     )
