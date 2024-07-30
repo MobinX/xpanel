@@ -20,7 +20,7 @@ export const ActionBar = () => {
         }
     })
     return (
-        <div className="flex w-full gap-2 items-center justify-center my-3 px-2 py-2 bg-base-content/0 rounded-2xl" >
+        <div className="flex w-full gap-2 items-center justify-center my-1 px-1 py-2 bg-base-content/0 rounded-2xl" >
             <button className="btn btn-circle btn-sm btn-ghost" onClick={async () => await goBack()}><ArrowLeft className="w-5 h-5" /></button>
             <div className="breadcrumbs overflow-x-auto hide-scroll flex-1 w-full flex items-center bg-base-content/50 px-2 py-1 rounded-2xl " ref={breadCrumbsRef}>
                 <ul>
@@ -43,7 +43,7 @@ export const ActionBar = () => {
                             <button className="btn btn-circle btn-ghost btn-sm md:h-8 md:w-8   bg-base-content/30" onClick={() => { setSelectMode(!selectMode) }}> <MousePointerSquareDashed className="w-4 h-4" /> </button>
                         </div>
                         <div> <button className="btn btn-circle btn-sm btn-ghost bg-base-content/30 hover:bg-base-content/50" onClick={async () => { if (selectedIds.length > 0) await exeDeleteWeb(selectedIds);  }}><Trash className="w-4 h-4" /></button></div>
-                        <Link href="/websites/add" ><button className="btn btn-circle btn-sm btn-ghost bg-base-content/30 hover:bg-base-content/50"><PackagePlus className="w-4 h-4" /></button> </Link>
+                       <button className="btn btn-circle btn-sm btn-ghost bg-base-content/30 hover:bg-base-content/50 hidden md:flex"><PackagePlus className="w-4 h-4" /></button> 
 
                     </div>
         </div>

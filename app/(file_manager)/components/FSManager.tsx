@@ -1,7 +1,8 @@
 "use client"
-import { createContext, ReactNode, useEffect, useReducer, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect, useReducer, useState } from "react";
 import { directoryItemType, getDir } from "../actions/fsActions";
 import { useRouter, useSearchParams } from "next/navigation"
+import { WebSocketContext } from "@/app/components/WebSocketManager";
 
 export const FSContext = createContext<{
     FsHistory: string[]
@@ -15,12 +16,12 @@ export const FSContext = createContext<{
     presentHistoryIndex: number
     canGoBack: boolean
     canGoNext: boolean
-    includeInHistory:boolean
+    includeInHistory: boolean
     setIncludeInHistory: any
-    selectMode:boolean
-    selectedIds:any[]
-    setSelectMode:any
-    setSelectedIds:any
+    selectMode: boolean
+    selectedIds: any[]
+    setSelectMode: any
+    setSelectedIds: any
 
 }>({
     FsHistory: [],
@@ -34,12 +35,12 @@ export const FSContext = createContext<{
     canGoBack: false,
     canGoNext: false,
     presentHistoryIndex: 0,
-    includeInHistory:true,
-    setIncludeInHistory:()=>{},
-    selectMode:false,
-    selectedIds:[],
-    setSelectMode:()=>{},
-    setSelectedIds:()=>{}
+    includeInHistory: true,
+    setIncludeInHistory: () => { },
+    selectMode: false,
+    selectedIds: [],
+    setSelectMode: () => { },
+    setSelectedIds: () => { }
 
 })
 
@@ -52,10 +53,27 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
     const [presentHistoryIndex, setPresentHistoryIndex] = useState<number>(0)
     const [canGoBack, setCanGoBack] = useState(false)
     const [canGoNext, setCanGoNext] = useState(false)
-    const [includeInHistory,setIncludeInHistory] = useState(true)
-    
+    const [includeInHistory, setIncludeInHistory] = useState(true)
+
     const [selectMode, setSelectMode] = useState(false)
     const [selectedIds, setSelectedIds] = useState<any[]>([])
+
+    const { sendMsg, lastMsg, isInitialized } = useContext(WebSocketContext)
+
+    useEffect(() => {
+        if (isInitialized) {
+            sendMsg({
+                type: "SHELL_CMD",
+                cmd: "dir"
+            })
+        }
+    }, [isInitialized])
+
+    useEffect(() => {
+        console.log(lastMsg)
+
+    }, [lastMsg])
+
 
     const router = useRouter();
 
@@ -118,7 +136,7 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
                 setIncludeInHistory(false)
                 router.back()
                 setPresentHistoryIndex(presentHistoryIndex - 1)
-                
+
             } catch (error) {
                 setErrorMsg("Something went wrong, Please try again")
                 setLaodingState("FAILED")
@@ -133,8 +151,8 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
                 setIncludeInHistory(false)
                 router.forward()
                 setPresentHistoryIndex(presentHistoryIndex + 1)
-                
-                
+
+
             } catch (error) {
                 setErrorMsg("Something went wrong, Please try again")
                 setLaodingState("FAILED")
@@ -143,7 +161,7 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
     }
 
     return (
-        <FSContext.Provider value={{ FsHistory, canGoBack, canGoNext, currentPath, dirItems, errorMsg, goBack, goNext, loadingState, openFolder, presentHistoryIndex,includeInHistory,setIncludeInHistory,selectMode, setSelectMode,selectedIds, setSelectedIds }} >
+        <FSContext.Provider value={{ FsHistory, canGoBack, canGoNext, currentPath, dirItems, errorMsg, goBack, goNext, loadingState, openFolder, presentHistoryIndex, includeInHistory, setIncludeInHistory, selectMode, setSelectMode, selectedIds, setSelectedIds }} >
             {children}
         </FSContext.Provider>
     )
