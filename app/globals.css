@@ -1,19 +1,104 @@
 @tailwind base;
-@tailwind components;
+@tailwind components; 
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --bc: 1 0 0 ;
+  /* --bc: 0.92 0.09 332.12 */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+.bg-fade-enter {
+  opacity: 0;
+  z-index: 1;
+}
+.bg-fade-enter-active {
+  opacity: 1;
+  transition: opacity 3000ms;
+}
+.bg-fade-exit {
+  opacity: 1;
+}
+.bg-fade-exit-active {
+  opacity: 0;
+  transition: opacity 3000ms;
+}
+.bg-image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transition: opacity 3000ms ease-in-out;
+  width: 100%;
+  height: 100%;
+}
+
+
+@keyframes fadeIntoFadeOutd {
+  0%{
+    backdrop-filter: blur(400px) brightness(0.6);
+
   }
+  50%{
+    backdrop-filter: blur(170px) brightness(0.6);
+  }
+  100%{
+    backdrop-filter: blur(400px) brightness(0.6);
+
+  }
+}
+
+@keyframes leftToRight {
+  0%{
+    left: 0;
+  }
+  50%{
+    left:75%
+  }
+  100%{
+    left:0
+  }
+}
+@keyframes rightToLeft {
+  0%{
+    right: 0;
+  }
+  50%{
+    right:75%
+  }
+  100%{
+    right:0%
+  }
+}
+
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+.hide-scroll {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.3);
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+::-webkit-scrollbar-thumb:window-inactive {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 body {
