@@ -35,13 +35,17 @@ interface ShellOutput {
     type: 'SHELL_OUT';
     newOutput: string;
 }
+interface error {
+    type:"error"
+    error:string
+} 
 
-type ServerMessage = FS_Progress | FS_Content | ShellOutput;
+type ServerMessage = FS_Progress | FS_Content | ShellOutput | error;
 
   
 export const WebSocketContext = createContext<{
     sendMsg:(msg:ClientMessage) => void
-    lastMsg: any
+    lastMsg: { id: string, msg: ServerMessage }|null
     isInitialized:boolean
     socketError:string|null
 }>({

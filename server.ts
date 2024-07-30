@@ -95,7 +95,7 @@ wss.on('connection', (ws: WebSocket) => {
                 handleShellCommand(ws, data);
             }
         } catch (error) {
-            ws.send(JSON.stringify({ error: `Error processing message: ${error}` }));
+            ws.send(JSON.stringify({ type:"error", error: `Error processing message: ${error}` }));
         }
     });
     ws.on('close', () => console.log('Client disconnected'));
@@ -114,7 +114,7 @@ async function handleFSOperation(ws: WebSocket, data: FS_Operation) {
     const increaseFileCount = () => completedFiles++;
 
     const sendProgress = (type: string, presentProgress: number) => {
-        let overallProgess = ((completedFiles * 100 + presentProgress) / (totalFiles * 100)) * 100
+        let overallProgess = Math.round(((completedFiles * 100 + presentProgress) / (totalFiles * 100)) * 100)
         ws.send(JSON.stringify({ type: 'FS_PROGRESS', msg: `${type} ${completedFiles + 1}th of ${totalFiles}`, perFileProgress: presentProgress, overallProgress: overallProgess } as FS_Progress));
     };
 
@@ -166,15 +166,15 @@ async function handleFSOperation(ws: WebSocket, data: FS_Operation) {
                 } else if (typeof srcFiles === 'string') {
                     await readFileAndWrite(srcFiles, dst!, ws);
                 } else {
-                    ws.send(JSON.stringify({ error: 'Invalid source for write operation.' }));
+                    ws.send(JSON.stringify({ type:"error", error: 'Invalid source for write operation.' }));
                 }
                 break;
 
             default:
-                ws.send(JSON.stringify({ error: 'Invalid FS_OP command.' }));
+                ws.send(JSON.stringify({ type:"error", error: 'Invalid FS_OP command.' }));
         }
     } catch (error) {
-        ws.send(JSON.stringify({ error: `Error during FS operation: ${error}` }));
+        ws.send(JSON.stringify({ type:"error", error: `Error during FS operation: ${error}` }));
     }
 }
 
@@ -195,7 +195,7 @@ function handleShellCommand(ws: WebSocket, data: ShellCommand) {
             ws.send(JSON.stringify({ type: 'SHELL_OUT', newOutput: `Command exited with code ${code}` } as ShellOutput));
         });
     } catch (error) {
-        ws.send(JSON.stringify({ error: `Error executing command: ${error}` }));
+        ws.send(JSON.stringify({ type:"error", error: `Error executing command: ${error}` }));
     }
 }
 
@@ -220,7 +220,7 @@ async function copyLargeFileOrFolder(
             await copyFolderWithProgress(ws, source, destination, onProgress, increaseFileCount);
         }
     } catch (error) {
-        ws.send(JSON.stringify({ error: `Error copying file: ${error}` }));
+        ws.send(JSON.stringify({ type:"error", error: `Error copying file: ${error}` }));
 
         throw error; // Re-throw to be caught at a higher level if needed
     }
@@ -238,7 +238,7 @@ async function moveLargeFileOrFolder(
         await deleteLargeFileOrFolder(ws, source, onProgress, increaseFileCount);
 
     } catch (error) {
-        ws.send(JSON.stringify({ error: `Error writing file: ${error}` }));
+        ws.send(JSON.stringify({ type:"error", error: `Error writing file: ${error}` }));
 
         throw error; // Re-throw to be caught at a higher level if needed
     }
@@ -263,7 +263,7 @@ async function deleteLargeFileOrFolder(
             increaseFileCount()
         }
     } catch (error) {
-        ws.send(JSON.stringify({ error: `Error deleting file: ${error}` }));
+        ws.send(JSON.stringify({ type:"error", error: `Error deleting file: ${error}` }));
 
         throw error; // Re-throw to be caught at a higher level if needed
     }
@@ -295,7 +295,7 @@ async function readLargeFile(
         }
 
     } catch (error) {
-        ws.send(JSON.stringify({ error: `Error reading file: ${error}` }));
+        ws.send(JSON.stringify({ type:"error", error: `Error reading file: ${error}` }));
 
         // Re-throw to be caught at a higher level if needed
     }
@@ -354,7 +354,7 @@ async function deleteFolderRecursive(folderPath: string, onProgress: (type: stri
     if (fs.existsSync(folderPath)) {
         const entries = await fs.promises.readdir(folderPath)
         for (const entry of entries ) {
-            onProgress("Deleting",((entries.indexOf(entry))/(entries.length))*100)
+            onProgress("Deleting",Math.round((entries.indexOf(entry))/(entries.length))*100)
             const fullPath = path.join(folderPath, entry);
             if ((await fs.promises.lstat(fullPath)).isDirectory()) {
                 await deleteFolderRecursive(fullPath, onProgress, increaseFileCount);
@@ -374,7 +374,7 @@ async function writeFile(filePath: string, content: string, ws: WebSocket) {
         await fs.promises.writeFile(filePath, content);
         ws.send(JSON.stringify({ type: 'FS_PROGRESS', msg: `File written: ${filePath}`, overallProgress: 100 }));
     } catch (error) {
-        ws.send(JSON.stringify({ error: `Error writing file: ${error}` }));
+        ws.send(JSON.stringify({ type:"error", error: `Error writing file: ${error}` }));
     }
 }
 
@@ -405,7 +405,7 @@ async function readFileAndWrite(sourcePath: string, destinationPath: string, ws:
             overallProgress: 100
         }));
     } catch (error) {
-        ws.send(JSON.stringify({ error: `Error reading or writing file: ${error}` }));
+        ws.send(JSON.stringify({ type:"error", error: `Error reading or writing file: ${error}` }));
     }
 }
 
@@ -415,7 +415,7 @@ async function moveFile(ws: WebSocket, source: string, destination: string, onPr
         onProgress(`Moving`, 100);
         increaseFileCount()
     } catch (error) {
-        ws.send(JSON.stringify({ error: `Error moving file: ${error}` }));
+        ws.send(JSON.stringify({ type:"error", error: `Error moving file: ${error}` }));
 
     }
 }
