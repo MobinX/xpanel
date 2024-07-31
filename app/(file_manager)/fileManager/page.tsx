@@ -59,8 +59,7 @@ const GridView = ({openFile}:{openFile:any}) => {
                                         {selectMode && <input type="checkbox" className="checkbox bg-base-content/30 absolute top-3 left-2 z-50" onClick={() => {
                                             if (selectedIds.indexOf(itm.parentPath + "/" + itm.name) > -1) setSelectedIds(removeFromArray(selectedIds, itm.parentPath + "/" + itm.name));
                                             else setSelectedIds(selectedIds.concat([itm.parentPath + "/" + itm.name]))
-                                        }} checked={(selectedIds.indexOf(itm.parentPath + "/" + itm.name) > -1)} />}
-
+                                        }} checked={(selectedIds.indexOf(itm.parentPath + "/" + itm.name) > -1)} readOnly />}
                                     </button>
                                 ) :
                                     (
@@ -73,7 +72,7 @@ const GridView = ({openFile}:{openFile:any}) => {
                                             {selectMode && <input type="checkbox" className="checkbox bg-base-content/30 absolute top-3 left-2 z-50" onClick={() => {
                                                 if (selectedIds.indexOf(itm.parentPath + "/" + itm.name) > -1) setSelectedIds(removeFromArray(selectedIds, itm.parentPath + "/" + itm.name));
                                                 else setSelectedIds(selectedIds.concat([itm.parentPath + "/" + itm.name]))
-                                            }} checked={(selectedIds.indexOf(itm.parentPath + "/" + itm.name) > -1)} />}
+                                            }} checked={(selectedIds.indexOf(itm.parentPath + "/" + itm.name) > -1)} readOnly />}
 
                                         </button>
                                     )
@@ -110,22 +109,37 @@ export const NEditor = ({closeFile,path}:{closeFile:any,path:string}) =>{
             </div>
             {((OperationQue.find(op=>op.msg=="FS_READ")) && OperationQue.find(op=>op.msg=="FS_READ")?.progress != 100) && <progress className="progress progress-secondary w-full h-1" value={OperationQue.find(op=>op.msg=="FS_READ") ? OperationQue.find(op=>op.msg=="FS_READ")?.progress : "10"} max="100"></progress> }
             <div className="w-full flex-1 h-full ">
-                <Editor theme="vs-dark" className="w-full h-full " language={getLanguageForFileName(path.split("/").pop() || "")} value={fileContent} onMount={(editor)=>{neditor.current = editor}}/>
+                <Editor theme="vs-dark" className="w-full h-full" language={getLanguageForFileName(path.split("/").pop() || "")} value={fileContent} onMount={(editor)=>{neditor.current = editor}}/>
             </div>
         </div>
     )
 }
 
-export const ContextMenu = ({top,left}:{top:number,left:number}) =>{
-    const {selectMode, applyCopy,applyCut,applyDelete} = useContext(FSContext)
+export const ContextMenu = ({top,left,open}:{top:number,left:number,open:boolean}) =>{
+    const {selectMode, applyCopy,applyCut,applyDelete,copyPathList,cutPathList,applyPast} = useContext(FSContext)
+    const prams = useSearchParams()
+    const location = prams.get("location")
+    const elmRef = useRef<HTMLUListElement>(null)
+    const [X,setX] = useState(0)
+    const [Y,setY] = useState(0)
+
+    useEffect(()=>{
+        let myHeight = elmRef.current?.offsetHeight
+        if(myHeight && ((top+myHeight) > window.innerHeight)) setY(top-myHeight)
+        else  setY(top);
+        let myWidth = elmRef.current?.offsetWidth
+        if(myWidth && ((left+myWidth) > window.innerWidth)) {console.log(left,myWidth,window.innerHeight); setX(left-myWidth)}
+        else {console.log(left,myWidth,window.innerHeight); setX(left);}
+    },[top,left,elmRef])
+   
+  
     return(
-        <ul className="menu bg-base-200 rounded-box w-64 absolute z-[9999]" style={{top:top,left:left}}>
+        <ul className="menu bg-base-200 rounded-box w-64 absolute z-[9999]" style={{top:Y,left:X,display:open ? "flex": "none"}} ref={elmRef}>
             <li><button className="btn justify-start w-full" disabled={!selectMode} onClick={()=>{applyCopy()}}>Copy</button></li>
             <li><button className="btn justify-start w-full" disabled={!selectMode} onClick={()=>{applyCut()}}>Move</button></li>
             <li><button className="btn justify-start w-full" disabled={!selectMode} onClick={()=>{applyDelete()}}>Delete</button></li>
+            <li><button className="btn justify-start w-full" disabled={!(copyPathList.length > 0 || cutPathList.length >0)} onClick={()=>{applyPast(location)}}>Past</button></li>
             <li><button className="btn justify-start w-full" disabled={!selectMode}>Rename</button></li>
-
-
         </ul>
     )
 
@@ -183,7 +197,7 @@ export default function FileManager() {
             }
             {openFilePath != "" && <NEditor closeFile={closeFile} path={openFilePath} />}
             {loadingState == "LOADING" && <LoadingUI />}
-            {openMenu && <ContextMenu left={menuAxis.x} top={menuAxis.y} />}
+            { <ContextMenu left={menuAxis.x} top={menuAxis.y} open={openMenu}/>}
             </div>
         </Suspense>
     )

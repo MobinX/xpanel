@@ -23,7 +23,7 @@ export default function RootLayout({
                     <FSManager>
                         <div className="w-full h-full flex ">
 
-                            <div className="flex flex-col md:px-8  py-4 px-2 gap-2 flex-1 w-full">
+                            <div className="flex flex-col md:px-8  py-4 px-2 gap-2 flex-1 w-full ">
                                 <ActionBar />
 
                                 {children}

@@ -29,6 +29,7 @@ export const FSContext = createContext<{
     applyCopy: any
     applyCut: any
     applyDelete: any
+    applyPast: any
     readFile: any
     writeFile: (src: string, content: string) => void
     fileContent: string
@@ -59,6 +60,7 @@ export const FSContext = createContext<{
     applyCopy: () => { },
     applyCut: () => { },
     applyDelete: () => { },
+    applyPast: () => { },
     fileContent: "",
     readFile: (src: any) => { },
     writeFile: (src: string, content: string) => { },
@@ -76,7 +78,8 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
     const [canGoBack, setCanGoBack] = useState(false)
     const [canGoNext, setCanGoNext] = useState(false)
     const [includeInHistory, setIncludeInHistory] = useState(true)
-
+    const prams = useSearchParams()
+    const location = prams.get("location")
     const [selectMode, setSelectMode] = useState(false)
     const [selectedIds, setSelectedIds] = useState<any[]>([])
     const [copyPathList, setCopyPathList] = useState<string[]>([])
@@ -98,51 +101,64 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
     }, [isInitialized])
 
     useEffect(() => {
-        console.log(".../...")
-        console.log(lastMsg)
-        if (lastMsg) {
-            const msg = lastMsg.msg
-            if(msg.type == "error") {
-                console.log("[fsManager] error ", msg.error)
-                setOperationQue([])
-            }
-            if (msg.type == "FS_CONTENT") {
-                setFileContent(fileContent + msg.newChunk)
-                const opEntry = OperationQue.find(op => op.msg == "FS_READ")
-                let temp: any[] = []
-                if (opEntry) {
-                    if (msg.progress != 100) {
-                        OperationQue.map(op => { if (op != opEntry) temp.push(op); })
-                        temp.push({ ...opEntry, progress: msg.progress })
+        const processMsg = async () => {
+            console.log(".../...")
+            console.log(lastMsg)
+            if (lastMsg) {
+                const msg = lastMsg.msg
+                if (msg.type == "error") {
+                    console.log("[fsManager] error ", msg.error)
+                    setOperationQue([])
+                }
+                if (msg.type == "FS_CONTENT") {
+                    setFileContent(fileContent + msg.newChunk)
+                    const opEntry = OperationQue.find(op => op.msg == "FS_READ")
+                    let temp: any[] = []
+                    if (opEntry) {
+                        if (msg.progress != 100) {
+                            OperationQue.map(op => { if (op != opEntry) temp.push(op); })
+                            temp.push({ ...opEntry, progress: msg.progress })
+                        }
+                        else {
+                            OperationQue.map(op => { if (op != opEntry) temp.push(op); })
+                        }
+                        setOperationQue(temp)
+                    }
+                }
+                if (msg.type == "FS_PROGRESS") {
+
+                    const opEntry = OperationQue.find(op => op.msg != "FS_READ")
+                    let temp: any[] = []
+                    if (opEntry) {
+                        if (msg.overallProgress != 100) {
+                            OperationQue.map(op => { if (op != opEntry) temp.push(op); })
+                            temp.push({ ...opEntry, progress: msg.overallProgress, msg: msg.msg })
+                        }
+                        else {
+                            console.log('completed refresh contents')
+                            setCutPathList([])
+                            await openFolder(location || "", false)
+                            OperationQue.map(op => { if (op != opEntry) temp.push(op); })
+                        }
+                        setOperationQue(temp)
                     }
                     else {
-                        OperationQue.map(op => { if (op != opEntry) temp.push(op); })
+                        if (msg.overallProgress != 100) {
+                            setOperationQue(OperationQue.concat([{ id: window.crypto.randomUUID(), msg: msg.msg, progress: msg.overallProgress }]))
+                        }
+                        else {
+                            console.log('completed refresh contents')
+                            setCutPathList([])
+                            await openFolder(location || "", false)
+                        }
                     }
-                    setOperationQue(temp)
                 }
+
+
+
             }
-            if (msg.type == "FS_PROGRESS") {
-
-                const opEntry = OperationQue.find(op => op.msg != "FS_READ")
-                let temp: any[] = []
-                if (opEntry) {
-                    if (msg.overallProgress != 100) {
-                        OperationQue.map(op => { if (op != opEntry) temp.push(op); })
-                        temp.push({ ...opEntry, progress: msg.overallProgress, msg: msg.msg })
-                    }
-                    else {
-                        OperationQue.map(op => { if (op != opEntry) temp.push(op); })
-                    }
-                    setOperationQue(temp)
-                }
-                else {
-                    setOperationQue(OperationQue.concat([{ id: window.crypto.randomUUID(), msg: msg.msg, progress: msg.overallProgress }]))
-                }
-            }
-           
-
-
         }
+        processMsg()
 
     }, [lastMsg])
 
@@ -151,6 +167,7 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
         if (selectMode) {
             setCopyPathList(selectedIds)
             setSelectMode(false)
+            setSelectedIds([])
         }
     }
 
@@ -158,13 +175,15 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
         if (selectMode) {
             setCutPathList(selectedIds)
             setSelectMode(false)
+            setSelectedIds([])
+
         }
     }
 
 
     const applyDelete = () => {
         const opEntry = OperationQue.find(op => op.msg != "FS_READ")
-        if (opEntry) { return }
+        if (opEntry) { console.log("returning delegte"); return }
         if (selectMode) {
             sendMsg({
                 type: "FS_OP",
@@ -177,21 +196,24 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
 
     const applyPast = (dst: string) => {
         const opEntry = OperationQue.find(op => op.msg != "FS_READ")
-        if (opEntry) { return }
+        if (opEntry) { console.log("returnung from past"); return }
         if (copyPathList.length > 0) {
+            console.log("sended past operation")
             sendMsg({
                 type: "FS_OP",
                 cmd: "copy",
-                srcFiles: selectedIds,
+                srcFiles: copyPathList,
                 dst: dst
             })
 
         }
         if (cutPathList.length > 0) {
+            console.log("sended past operation")
+
             sendMsg({
                 type: "FS_OP",
                 cmd: "cut",
-                srcFiles: selectedIds,
+                srcFiles: cutPathList,
                 dst: dst
             })
 
@@ -243,6 +265,7 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
             if (typeof itm != "string") {
                 setDirItems(itm);
                 setLaodingState("SUCCESS");
+                setSelectedIds([])
                 if (includeinhistory) {
                     if (FsHistory.length > 0) {
                         let tmpHistory: any[] = []
@@ -301,7 +324,7 @@ export const FSManager = ({ children }: { children: ReactNode }) => {
     }
 
     return (
-        <FSContext.Provider value={{ FsHistory, canGoBack, canGoNext, currentPath, dirItems, errorMsg, goBack, goNext, loadingState, openFolder, presentHistoryIndex, includeInHistory, setIncludeInHistory, selectMode, setSelectMode, selectedIds, setSelectedIds, applyCopy, applyCut, applyDelete, copyPathList, cutPathList, OperationQue, readFile, setOperationQue, writeFile, fileContent }} >
+        <FSContext.Provider value={{ FsHistory, canGoBack, canGoNext, currentPath, dirItems, errorMsg, goBack, goNext, loadingState, openFolder, presentHistoryIndex, includeInHistory, setIncludeInHistory, selectMode, setSelectMode, selectedIds, setSelectedIds, applyCopy, applyCut, applyDelete, copyPathList, cutPathList, OperationQue, readFile, setOperationQue, writeFile, fileContent,applyPast }} >
             {children}
         </FSContext.Provider>
     )
